@@ -342,6 +342,16 @@
             text-align: center;
             color: white;
             position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
 
         .hero h1 {
@@ -642,10 +652,11 @@
             height: 320px;
             position: relative;
             overflow: hidden;
-            background: #f8fafc;
+            background: #f1f3f4;
             display: flex;
             align-items: center;
             justify-content: center;
+            border-radius: 0;
         }
 
         .portfolio-image img {
@@ -654,6 +665,7 @@
             object-fit: cover;
             object-position: center;
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: block;
         }
 
         .portfolio-item:hover .portfolio-image img {
@@ -898,12 +910,23 @@
             .nav {
                 justify-content: space-between;
                 align-items: center;
+                padding: 0 10px;
+            }
+
+            .hero {
+                padding: 100px 0 80px;
+                min-height: 100vh;
+            }
+
+            .hero .container {
+                padding: 0 15px;
             }
 
             .hero h1 {
-                font-size: 2.2rem;
+                font-size: 2rem;
                 line-height: 1.2;
-                padding: 0 15px;
+                padding: 0 10px;
+                margin-bottom: 20px;
             }
 
             .changing-text {
@@ -914,24 +937,38 @@
             
             .hero p {
                 font-size: 1rem;
-                padding: 0 20px;
+                padding: 0 15px;
                 line-height: 1.5;
+                margin-bottom: 40px;
             }
             
             .hero-buttons {
                 flex-direction: column;
                 align-items: center;
-                gap: 15px;
+                gap: 16px;
                 padding: 0 20px;
             }
 
             .cta-button, .btn-secondary {
                 width: auto;
-                min-width: 200px;
                 max-width: 280px;
+                min-width: 220px;
                 text-align: center;
-                font-size: 0.9rem;
+                font-size: 0.95rem;
                 padding: 14px 20px;
+                border-radius: 25px;
+                font-weight: 600;
+            }
+
+            .cta-button {
+                background: linear-gradient(45deg, #FF6F00, #FF8F50);
+                box-shadow: 0 8px 25px rgba(255, 111, 0, 0.4);
+            }
+
+            .btn-secondary {
+                background: rgba(255, 255, 255, 0.25);
+                border: 2px solid rgba(255, 255, 255, 0.4);
+                backdrop-filter: blur(10px);
             }
             
             .form-row {
@@ -982,22 +1019,30 @@
             }
 
             .logo {
-                font-size: 22px;
+                font-size: 20px;
             }
 
             .logo-icon {
-                width: 40px;
-                height: 40px;
+                width: 38px;
+                height: 38px;
                 font-size: 14px;
+            }
+
+            .nav .cta-button {
+                font-size: 0.85rem;
+                padding: 10px 18px;
+                border-radius: 20px;
             }
 
             /* Fix pricing cards on mobile */
             .pricing-grid {
                 gap: 20px;
+                grid-template-columns: 1fr;
             }
 
             .pricing-card {
                 padding: 25px 20px;
+                margin: 0 10px;
             }
 
             .pricing-card h3 {
@@ -1053,12 +1098,18 @@
             }
 
             .logo {
-                font-size: 20px;
+                font-size: 18px;
             }
 
             .logo-icon {
-                width: 35px;
-                height: 35px;
+                width: 32px;
+                height: 32px;
+            }
+
+            .nav .cta-button {
+                font-size: 0.8rem;
+                padding: 9px 16px;
+                border-radius: 18px;
             }
         }
     </style>
@@ -1159,48 +1210,21 @@
         </div>
     </section>
 
-     <section id="portfolio" class="portfolio">
+    <section id="portfolio" class="portfolio">
         <div class="container">
             <h2 class="section-title">Our Success Stories</h2>
             <p style="text-align: center; font-size: 1.2rem; color: #4a5568; margin-bottom: 20px;">See the amazing apps we've built for entrepreneurs just like you</p>
             <div class="portfolio-grid">
                 <div class="portfolio-item">
                     <div class="portfolio-image">
-                        <img src="assets/Car hiring app/Car hiring app.png" alt="Car Hiring App">
+                        <div style="background: #FF6F00; color: white; padding: 40px; border-radius: 15px; text-align: center;">
+                            <h4>🚗 Car Rental App</h4>
+                            <p>Live Demo Available</p>
+                        </div>
                     </div>
                     <div class="portfolio-content">
-                        <h3>Car Hiring App</h3>
+                        <h3>Car Hiring Platform</h3>
                         <p>Complete car rental platform with real-time availability, booking management, GPS tracking, and secure payment integration for seamless vehicle rentals.</p>
-                        <div class="portfolio-tags">
-                            <span class="tag">FlutterFlow</span>
-                            <span class="tag">GPS Integration</span>
-                            <span class="tag">Payment Gateway</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="portfolio-item">
-                    <div class="portfolio-image">
-                        <img src="assets/Event app/Event app.png" alt="Event App">
-                    </div>
-                    <div class="portfolio-content">
-                        <h3>Event Management App</h3>
-                        <p>Comprehensive event planning platform with ticket booking, attendee management, real-time notifications, and social networking features.</p>
-                        <div class="portfolio-tags">
-                            <span class="tag">Event Management</span>
-                            <span class="tag">Social Features</span>
-                            <span class="tag">Real-time Updates</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="portfolio-item">
-                    <div class="portfolio-image">
-                        <img src="assets/Food delivery app/Food delivery app.png" alt="Food Delivery App">
-                    </div>
-                    <div class="portfolio-content">
-                        <h3>Food Delivery Platform</h3>
-                        <p>Multi-vendor food delivery app with restaurant management, real-time order tracking, delivery optimization, and customer rating system.</p>
                         <div class="portfolio-tags">
                             <span class="tag">Multi-vendor</span>
                             <span class="tag">Real-time Tracking</span>
@@ -1211,7 +1235,10 @@
                 
                 <div class="portfolio-item">
                     <div class="portfolio-image">
-                        <img src="assets/Receipt app/Receipt_app.png" alt="Receipt App">
+                        <div style="background: #764ba2; color: white; padding: 40px; border-radius: 15px; text-align: center;">
+                            <h4>📄 Receipt Manager</h4>
+                            <p>Smart OCR Technology</p>
+                        </div>
                     </div>
                     <div class="portfolio-content">
                         <h3>Smart Receipt Manager</h3>
