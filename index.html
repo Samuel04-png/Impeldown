@@ -1,328 +1,13 @@
-    <script>
-        // Wait for DOM to load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Lucide icons
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-
-            // Initialize EmailJS (Replace with your actual EmailJS credentials)
-            if (typeof emailjs !== 'undefined') {
-                emailjs.init("YOUR_EMAILJS_PUBLIC_KEY"); // Get this from emailjs.com
-            }
-        });
-
-        // Form submission handler with email notifications
-        document.getElementById('contactForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            // Show loading state
-            const submitBtn = document.querySelector('.submit-btn');
-            const btnText = document.querySelector('.btn-text');
-            const loadingSpinner = document.querySelector('.loading-spinner');
-            const successMessage = document.getElementById('successMessage');
-            const errorMessage = document.getElementById('errorMessage');
-            
-            // Reset messages
-            successMessage.style.display = 'none';
-            errorMessage.style.display = 'none';
-            
-            // Show loading
-            btnText.textContent = 'Sending Your Project Details...';
-            loadingSpinner.style.display = 'inline-block';
-            submitBtn.disabled = true;
-            
-            // Collect form data
-            const formData = new FormData(this);
-            const data = Object.fromEntries(formData);
-            
-            try {
-                // Format data for email
-                const projectDetails = `
-                    NEW PROJECT INQUIRY - ImpelDown
-                    ================================
-                    
-                    👤 Contact Information:
-                    Name: ${data.firstName} ${data.lastName}
-                    Email: ${data.email}
-                    Phone: ${data.phone || 'Not provided'}
-                    Company: ${data.company || 'Not provided'}
-                    
-                    🚀 Project Details:
-                    Project Type: ${data.projectType}
-                    Budget Range: ${data.budget || 'Not specified'}
-                    Timeline: ${data.timeline || 'Not specified'}
-                    Industry: ${data.industry || 'Not specified'}
-                    
-                    💡 Project Description:
-                    ${data.description}
-                    
-                    📅 Submitted: ${new Date().toLocaleString()}
-                `;
-
-                // Send email to your team using EmailJS
-                if (typeof emailjs !== 'undefined') {
-                    const emailParams = {
-                        to_email: 'samuel@impeldown.co', // Your email
-                        from_name: `${data.firstName} ${data.lastName}`,
-                        from_email: data.email,
-                        subject: `New Project Inquiry - ${data.projectType}`,
-                        message: projectDetails,
-                        reply_to: data.email
-                    };
-                    
-                    await emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', emailParams);
-                    
-                    // Send confirmation email to client
-                    const confirmationParams = {
-                        to_email: data.email,
-                        to_name: data.firstName,
-                        from_name: 'ImpelDown Team',
-                        subject: 'Thank you for your project inquiry!',
-                        message: `Hi ${data.firstName},
-
-Thank you for reaching out to ImpelDown! We've received your project details and are excited about the possibility of working together.
-
-📋 Here's what happens next:
-1. Our team will review your project details within 24 hours
-2. We'll prepare a customized proposal based on your requirements
-3. We'll schedule a free consultation call to discuss your vision
-
-🚀 Your Project Summary:
-- Project Type: ${data.projectType}
-- Budget Range: ${data.budget || 'To be discussed'}
-- Timeline: ${data.timeline || 'To be discussed'}
-
-Want to skip the wait? Book a free consultation call directly:
-👉 https://calendly.com/impeldown/consultation
-
-Best regards,
-The ImpelDown Team
-📧 samuel@impeldown.co
-🌐 www.impeldown.co`
-                    };
-                    
-                    await emailjs.send('YOUR_SERVICE_ID', 'YOUR_CONFIRMATION_TEMPLATE_ID', confirmationParams);
-                }
-                
-                // Simulate sending to your backend/webhook for additional processing
-                // You can replace this with your actual backend endpoint
-                const webhookData = {
-                    ...data,
-                    timestamp: new Date().toISOString(),
-                    source: 'landing_page',
-                    lead_score: calculateLeadScore(data)
-                };
-                
-                // Send to webhook/backend (replace with your actual endpoint)
-                try {
-                    await fetch('https://your-backend.com/api/leads', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(webhookData)
-                    });
-                } catch (webhookError) {
-                    console.log('Webhook failed, but email was sent successfully');
-                }
-                
-                // Show success message
-                successMessage.style.display = 'block';
-                this.reset();
-                
-                // Auto-open Calendly after 3 seconds
-                setTimeout(() => {
-                    if (confirm('Would you like to schedule a consultation call right now?')) {
-                        openCalendly();
-                    }
-                }, 3000);
-                
-            } catch (error) {
-                console.error('Error submitting form:', error);
-                errorMessage.style.display = 'block';
-            } finally {
-                // Reset button state
-                btnText.textContent = '🚀 Start My Project Journey';
-                loadingSpinner.style.display = 'none';
-                submitBtn.disabled = false;
-            }
-        });
-
-        // Calculate lead score based on form data
-        function calculateLeadScore(data) {
-            let score = 0;
-            
-            // Budget scoring
-            if (data.budget === '25k-plus') score += 30;
-            else if (data.budget === '10k-25k') score += 25;
-            else if (data.budget === '5k-10k') score += 20;
-            else if (data.budget === 'partnership') score += 15;
-            
-            // Timeline scoring
-            if (data.timeline === 'asap') score += 25;
-            else if (data.timeline === '1-month') score += 20;
-            else if (data.timeline === '2-3-months') score += 15;
-            
-            // Project type scoring
-            if (data.projectType === 'full-app') score += 25;
-            else if (data.projectType === 'partnership') score += 20;
-            else if (data.projectType === 'mvp') score += 15;
-            
-            // Company field filled
-            if (data.company) score += 10;
-            
-            // Phone provided
-            if (data.phone) score += 5;
-            
-            // Detailed description
-            if (data.description && data.description.length > 100) score += 15;
-            
-            return Math.min(score, 100); // Cap at 100
-        }
-
-        // Calendly integration
-        function openCalendly() {
-            if (typeof Calendly !== 'undefined') {
-                Calendly.initPopupWidget({
-                    url: 'https://calendly.com/impeldown/consultation' // Replace with your actual Calendly link
-                });
-            } else {
-                // Fallback - open in new window
-                window.open('https://calendly.com/impeldown/consultation', '_blank');
-            }
-        }
-
-        // Booking modal functions
-        function openBookingModal(planName) {
-            document.getElementById('modalTitle').textContent = `Book ${planName}`;
-            document.getElementById('selectedPlan').value = planName;
-            document.getElementById('bookingModal').style.display = 'block';
-        }
-
-        function closeBookingModal() {
-            document.getElementById('bookingModal').style.display = 'none';
-        }
-
-        // Booking form submission
-        document.getElementById('bookingForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const data = Object.fromEntries(formData);
-            
-            // Send booking data via EmailJS
-            if (typeof emailjs !== 'undefined') {
-                try {
-                    const bookingParams = {
-                        to_email: 'samuel@impeldown.co',
-                        from_name: data.modalName,
-                        from_email: data.modalEmail,
-                        subject: `New Booking Request - ${data.selectedPlan}`,
-                        message: `
-                            NEW BOOKING REQUEST
-                            ==================
-                            
-                            Plan: ${data.selectedPlan}
-                            Name: ${data.modalName}
-                            Email: ${data.modalEmail}
-                            Phone: ${data.modalPhone}
-                            
-                            Project Description:
-                            ${data.modalProject}
-                            
-                            Submitted: ${new Date().toLocaleString()}
-                        `
-                    };
-                    
-                    await emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', bookingParams);
-                    
-                    alert('Thank you! We\'ll contact you within 24 hours to schedule your free consultation.');
-                    closeBookingModal();
-                    this.reset();
-                    
-                    // Auto-open Calendly
-                    setTimeout(() => openCalendly(), 1000);
-                    
-                } catch (error) {
-                    alert('Error submitting booking. Please try again or contact us directly.');
-                }
-            }
-        });
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('bookingModal');
-            if (event.target == modal) {
-                closeBookingModal();
-            }
-        }
-
-        // Smooth scrolling for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-
-        // Header scroll effect
-        window.addEventListener('scroll', function() {
-            const header = document.querySelector('header');
-            if (window.scrollY > 100) {
-                header.style.background = 'rgba(30, 60, 114, 0.95)';
-            } else {
-                header.style.background = 'rgba(255, 255, 255, 0.1)';
-            }
-        });
-
-        // Add intersection observer for animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.animationPlayState = 'running';
-                }
-            });
-        }, observerOptions);
-
-        // Observe all elements with animations
-        document.querySelectorAll('.process-step').forEach(step => {
-            observer.observe(step);
-        });
-
-        // Add form field validation and enhancement
-        document.querySelectorAll('input, select, textarea').forEach(field => {
-            field.addEventListener('focus', function() {
-                this.parentElement.style.transform = 'scale(1.02)';
-            });
-            
-            field.addEventListener('blur', function() {
-                this.parentElement.style.transform = 'scale(1)';
-            });
-        });
-    </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ImpelDown - Your Vision, Built at Lightning Speed</title>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <!-- Fixed icon imports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.js"></script>
     <!-- EmailJS for form submissions -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <!-- Calendly integration -->
-    <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js"></script>
     <style>
         * {
             margin: 0;
@@ -330,16 +15,41 @@ The ImpelDown Team
             box-sizing: border-box;
         }
 
-        body {
+        /* Remove any extra content or spacing */
+        html, body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             line-height: 1.6;
             color: #1a1a1a;
             overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            scroll-behavior: smooth;
+            height: 100%;
+        }
+
+        /* Ensure footer is at bottom and no extra scrolling */
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        main {
+            flex: 1;
+        }
+
+        footer {
+            background: #1a202c;
+            color: white;
+            padding: 60px 0 30px;
+            margin-top: auto;
         }
 
         .gradient-bg {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
             position: relative;
+            min-height: 100vh;
+            overflow: hidden;
         }
 
         .gradient-bg::before {
@@ -349,14 +59,151 @@ The ImpelDown Team
             left: 0;
             right: 0;
             bottom: 0;
-            background: radial-gradient(circle at 30% 50%, rgba(255, 111, 97, 0.2), transparent 50%),
-                        radial-gradient(circle at 70% 80%, rgba(255, 135, 135, 0.2), transparent 50%);
-            animation: float 6s ease-in-out infinite;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(255, 111, 0, 0.15), transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(66, 133, 244, 0.15), transparent 40%),
+                radial-gradient(circle at 40% 80%, rgba(255, 135, 135, 0.1), transparent 30%);
+            animation: gradientShift 8s ease-in-out infinite;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(1deg); }
+        .gradient-bg::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)"/></svg>');
+            animation: dotsMove 15s linear infinite;
+            opacity: 0.3;
+        }
+
+        .floating-elements {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .floating-element {
+            position: absolute;
+            border-radius: 50%;
+            animation: float-around 25s infinite linear;
+        }
+
+        .floating-element:nth-child(1) {
+            width: 120px;
+            height: 120px;
+            top: 15%;
+            left: 8%;
+            background: radial-gradient(circle, rgba(255, 111, 0, 0.2), rgba(255, 111, 0, 0.05));
+            animation-delay: 0s;
+            animation-duration: 20s;
+        }
+
+        .floating-element:nth-child(2) {
+            width: 80px;
+            height: 80px;
+            top: 65%;
+            right: 12%;
+            background: radial-gradient(circle, rgba(66, 133, 244, 0.2), rgba(66, 133, 244, 0.05));
+            animation-delay: -7s;
+            animation-duration: 25s;
+        }
+
+        .floating-element:nth-child(3) {
+            width: 150px;
+            height: 150px;
+            bottom: 25%;
+            left: 15%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.03));
+            animation-delay: -14s;
+            animation-duration: 30s;
+        }
+
+        .floating-element:nth-child(4) {
+            width: 60px;
+            height: 60px;
+            top: 35%;
+            left: 55%;
+            background: radial-gradient(circle, rgba(255, 111, 0, 0.15), rgba(255, 111, 0, 0.03));
+            animation-delay: -3s;
+            animation-duration: 22s;
+        }
+
+        .floating-element:nth-child(5) {
+            width: 90px;
+            height: 90px;
+            bottom: 15%;
+            right: 25%;
+            background: radial-gradient(circle, rgba(66, 133, 244, 0.15), rgba(66, 133, 244, 0.03));
+            animation-delay: -10s;
+            animation-duration: 28s;
+        }
+
+        .floating-element:nth-child(6) {
+            width: 40px;
+            height: 40px;
+            top: 50%;
+            right: 35%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+            animation-delay: -5s;
+            animation-duration: 18s;
+        }
+
+        /* Particle system */
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particleFloat 8s infinite ease-in-out;
+        }
+
+        .particle:nth-child(odd) {
+            animation-delay: -2s;
+        }
+
+        .particle:nth-child(even) {
+            animation-delay: -4s;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { 
+                background: 
+                    radial-gradient(circle at 20% 30%, rgba(255, 111, 0, 0.15), transparent 40%),
+                    radial-gradient(circle at 80% 70%, rgba(66, 133, 244, 0.15), transparent 40%),
+                    radial-gradient(circle at 40% 80%, rgba(255, 135, 135, 0.1), transparent 30%);
+            }
+            50% { 
+                background: 
+                    radial-gradient(circle at 70% 20%, rgba(255, 111, 0, 0.2), transparent 40%),
+                    radial-gradient(circle at 30% 80%, rgba(66, 133, 244, 0.2), transparent 40%),
+                    radial-gradient(circle at 60% 40%, rgba(255, 135, 135, 0.15), transparent 30%);
+            }
+        }
+
+        @keyframes dotsMove {
+            0% { transform: translateX(0) translateY(0); }
+            100% { transform: translateX(-20px) translateY(-20px); }
+        }
+
+        @keyframes float-around {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0.3; }
+            25% { transform: translate(30px, -20px) rotate(90deg) scale(1.1); opacity: 0.6; }
+            50% { transform: translate(10px, 40px) rotate(180deg) scale(0.9); opacity: 0.8; }
+            75% { transform: translate(-25px, 15px) rotate(270deg) scale(1.05); opacity: 0.5; }
+            100% { transform: translate(0, 0) rotate(360deg) scale(1); opacity: 0.3; }
+        }
+
+        @keyframes particleFloat {
+            0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.3; }
+            25% { transform: translateY(-15px) translateX(10px); opacity: 0.7; }
+            50% { transform: translateY(-25px) translateX(-5px); opacity: 1; }
+            75% { transform: translateY(-10px) translateX(15px); opacity: 0.5; }
         }
 
         .container {
@@ -367,16 +214,17 @@ The ImpelDown Team
             z-index: 1;
         }
 
+        /* Enhanced Header */
         header {
             padding: 20px 0;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             position: fixed;
             width: 100%;
             top: 0;
             z-index: 1000;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .nav {
@@ -386,19 +234,26 @@ The ImpelDown Team
         }
 
         .logo {
-            font-size: 24px;
-            font-weight: 800;
+            font-size: 28px;
+            font-weight: 900;
             color: white;
             text-decoration: none;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
+            letter-spacing: -0.5px;
         }
 
         .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDEwSDIwVjE4SDE2VjE0SDE0VjE2SDEwVjEwWiIgZmlsbD0iIzQyODVGNCIvPgo8cGF0aCBkPSJNMjAgMjJIMzBWMzBIMjZWMjZIMjJWMjJaIiBmaWxsPSIjRkY2RjAwIi8+CjxwYXRoIGQ9Ik0xOCAzMEM4IDE1IDMyIDUgMzAgMThDMjggMzEgMTggMzAgMTggMzBaIiBzdHJva2U9IiNGRjZGMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8L3N2Zz4K') center/contain no-repeat;
+            width: 55px;
+            height: 55px;
+            border-radius: 15px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 15px rgba(255, 111, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
         }
 
         .nav-links {
@@ -410,25 +265,38 @@ The ImpelDown Team
         .nav-links a {
             color: white;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
             transition: all 0.3s ease;
             position: relative;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
         }
 
         .nav-links a::after {
             content: '';
             position: absolute;
-            bottom: -5px;
-            left: 0;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
             width: 0;
-            height: 2px;
-            background: #FF6F00;
+            height: 3px;
+            background: linear-gradient(90deg, #FF6F00, #4285F4);
             transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #FF6F00;
         }
 
         .nav-links a:hover::after {
-            width: 100%;
+            width: 80%;
         }
+
+        /* Mobile menu - REMOVED as requested */
 
         .cta-button {
             background: linear-gradient(45deg, #FF6F00, #FF8F50);
@@ -441,6 +309,26 @@ The ImpelDown Team
             transition: all 0.3s ease;
             text-decoration: none;
             display: inline-block;
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            max-width: 250px;
+            text-align: center;
+        }
+
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .cta-button:hover::before {
+            left: 100%;
         }
 
         .cta-button:hover {
@@ -448,10 +336,12 @@ The ImpelDown Team
             box-shadow: 0 10px 25px rgba(255, 111, 0, 0.3);
         }
 
+        /* Hero Section */
         .hero {
             padding: 150px 0 100px;
             text-align: center;
             color: white;
+            position: relative;
         }
 
         .hero h1 {
@@ -462,6 +352,7 @@ The ImpelDown Team
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            animation: slideInUp 1s ease;
         }
 
         .hero p {
@@ -471,6 +362,7 @@ The ImpelDown Team
             max-width: 600px;
             margin-left: auto;
             margin-right: auto;
+            animation: slideInUp 1s ease 0.2s both;
         }
 
         .hero-buttons {
@@ -478,6 +370,7 @@ The ImpelDown Team
             gap: 20px;
             justify-content: center;
             flex-wrap: wrap;
+            animation: slideInUp 1s ease 0.4s both;
         }
 
         .btn-secondary {
@@ -498,6 +391,118 @@ The ImpelDown Team
             border-color: rgba(255, 255, 255, 0.5);
         }
 
+        /* Animations */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Stats Section */
+        .stats-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 100px 0;
+            color: white;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stats-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin-top: 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-item {
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-8px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: #FF6F00;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease;
+        }
+
+        .stat-number.animate {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Text Changing Animation */
+        .changing-text {
+            position: relative;
+            display: inline-block;
+        }
+
+        .changing-text .text-item {
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: textChange 12s infinite;
+        }
+
+        .changing-text .text-item:nth-child(1) { animation-delay: 0s; }
+        .changing-text .text-item:nth-child(2) { animation-delay: 3s; }
+        .changing-text .text-item:nth-child(3) { animation-delay: 6s; }
+        .changing-text .text-item:nth-child(4) { animation-delay: 9s; }
+
+        @keyframes textChange {
+            0%, 20% { opacity: 1; transform: translateY(0); }
+            25%, 95% { opacity: 0; transform: translateY(-20px); }
+            100% { opacity: 0; transform: translateY(20px); }
+        }
+
+        @keyframes countUp {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .stat-label {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* Features Section */
         .features {
             padding: 100px 0;
             background: #f8fafc;
@@ -520,11 +525,14 @@ The ImpelDown Team
         .feature-card {
             background: white;
             padding: 40px;
-            border-radius: 20px;
+            border-radius: 24px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.08),
+                0 0 0 1px rgba(255, 255, 255, 0.05);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
+            border: 1px solid rgba(66, 133, 244, 0.1);
             overflow: hidden;
         }
 
@@ -535,12 +543,21 @@ The ImpelDown Team
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(45deg, #4285F4, #FF6F00);
+            background: linear-gradient(90deg, #4285F4, #FF6F00);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+            z-index: 1;
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
         }
 
         .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            transform: translateY(-12px);
+            box-shadow: 
+                0 30px 60px rgba(0, 0, 0, 0.12),
+                0 0 0 1px rgba(66, 133, 244, 0.1);
         }
 
         .feature-icon {
@@ -552,18 +569,23 @@ The ImpelDown Team
             align-items: center;
             justify-content: center;
             margin: 0 auto 20px;
+            color: white;
+            font-size: 24px;
         }
 
         .feature-card h3 {
             font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: #2d3748;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #1e293b;
+            letter-spacing: -0.3px;
         }
 
         .feature-card p {
-            color: #4a5568;
+            color: #64748b;
+            margin-bottom: 20px;
             line-height: 1.6;
+            font-weight: 400;
         }
 
         /* Portfolio Section */
@@ -581,63 +603,107 @@ The ImpelDown Team
 
         .portfolio-item {
             background: white;
-            border-radius: 20px;
+            border-radius: 24px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.08),
+                0 0 0 1px rgba(255, 255, 255, 0.05);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
+            border: 1px solid rgba(66, 133, 244, 0.1);
+        }
+
+        .portfolio-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4285F4, #FF6F00);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+            z-index: 1;
+        }
+
+        .portfolio-item:hover::before {
+            transform: scaleX(1);
         }
 
         .portfolio-item:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            transform: translateY(-12px);
+            box-shadow: 
+                0 30px 60px rgba(0, 0, 0, 0.12),
+                0 0 0 1px rgba(66, 133, 244, 0.1);
         }
 
         .portfolio-image {
             width: 100%;
-            height: 250px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .phone-mockup {
-            width: 120px;
-            height: 240px;
-            background: #333;
-            border-radius: 25px;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .phone-screen {
-            width: 100%;
-            height: 100%;
-            background: white;
-            border-radius: 15px;
+            height: 320px;
             position: relative;
             overflow: hidden;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .portfolio-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .portfolio-item:hover .portfolio-image img {
+            transform: scale(1.08);
+        }
+
+        /* Portfolio placeholder for demo */
+        .portfolio-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+            box-sizing: border-box;
+            border-radius: 0;
+            font-weight: 600;
+        }
+
+        .portfolio-placeholder h4 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .portfolio-placeholder p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin: 0;
         }
 
         .portfolio-content {
-            padding: 30px;
+            padding: 35px;
         }
 
         .portfolio-item h3 {
-            font-size: 1.4rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: #2d3748;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #1e293b;
+            letter-spacing: -0.3px;
         }
 
         .portfolio-item p {
-            color: #4a5568;
-            margin-bottom: 15px;
+            color: #64748b;
+            margin-bottom: 20px;
             line-height: 1.6;
+            font-weight: 400;
         }
 
         .portfolio-tags {
@@ -647,271 +713,17 @@ The ImpelDown Team
         }
 
         .tag {
-            background: #f7fafc;
-            color: #4a5568;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 0.9rem;
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            color: #475569;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
             border: 1px solid #e2e8f0;
-        }
-
-        /* Animated Process Section */
-        .process {
-            padding: 100px 0;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .process::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.5;
-        }
-
-        .process-container {
-            position: relative;
-            z-index: 1;
-        }
-
-        .process-timeline {
-            position: relative;
-            max-width: 800px;
-            margin: 60px auto 0;
-        }
-
-        .timeline-line {
-            position: absolute;
-            left: 50%;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: linear-gradient(to bottom, #FF6F00, #4285F4);
-            transform: translateX(-50%);
-        }
-
-        .process-step {
-            position: relative;
-            margin-bottom: 80px;
-            display: flex;
-            align-items: center;
-            opacity: 0;
-            animation: slideInUp 0.8s ease forwards;
-        }
-
-        .process-step:nth-child(1) { animation-delay: 0.2s; }
-        .process-step:nth-child(2) { animation-delay: 0.4s; }
-        .process-step:nth-child(3) { animation-delay: 0.6s; }
-        .process-step:nth-child(4) { animation-delay: 0.8s; }
-
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .step-content {
-            flex: 1;
-            padding: 30px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            margin: 0 40px;
-            transition: all 0.3s ease;
-        }
-
-        .step-content:hover {
-            transform: scale(1.05);
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        .process-step:nth-child(even) {
-            flex-direction: row-reverse;
-        }
-
-        .step-number {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(45deg, #FF6F00, #4285F4);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 1.5rem;
-            box-shadow: 0 10px 30px rgba(255, 111, 0, 0.3);
-            position: relative;
-            z-index: 2;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .step-content h3 {
-            font-size: 1.5rem;
             font-weight: 600;
-            margin-bottom: 15px;
-            color: white;
+            letter-spacing: 0.3px;
         }
 
-        .step-content p {
-            color: rgba(255, 255, 255, 0.9);
-            line-height: 1.6;
-        }
-
-        /* Enhanced Pricing Section */
-        .pricing {
-            padding: 100px 0;
-            background: #f8fafc;
-        }
-
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 40px;
-            margin-top: 60px;
-        }
-
-        .pricing-card {
-            background: white;
-            border-radius: 25px;
-            padding: 40px;
-            text-align: center;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-            position: relative;
-            transition: all 0.4s ease;
-            overflow: hidden;
-        }
-
-        .pricing-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            background: linear-gradient(45deg, #4285F4, #FF6F00);
-        }
-
-        .pricing-card.featured {
-            transform: scale(1.05);
-            border: 3px solid #4285F4;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .pricing-card.featured::after {
-            content: 'Most Popular';
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(45deg, #FF6F00, #4285F4);
-            color: white;
-            padding: 8px 25px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            box-shadow: 0 5px 15px rgba(255, 111, 0, 0.3);
-        }
-
-        .pricing-card:hover {
-            transform: translateY(-15px);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-        }
-
-        .pricing-card.featured:hover {
-            transform: scale(1.05) translateY(-15px);
-        }
-
-        .pricing-header {
-            margin-bottom: 30px;
-        }
-
-        .pricing-card h3 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #2d3748;
-        }
-
-        .pricing-card.featured h3 {
-            color: white;
-        }
-
-        .price {
-            font-size: 3.5rem;
-            font-weight: 800;
-            color: #4285F4;
-            margin: 20px 0;
-            position: relative;
-        }
-
-        .pricing-card.featured .price {
-            color: white;
-        }
-
-        .price-subtitle {
-            color: #4a5568;
-            margin-bottom: 30px;
-            font-style: italic;
-        }
-
-        .pricing-card.featured .price-subtitle {
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .pricing-description {
-            color: #4a5568;
-            line-height: 1.6;
-            margin-bottom: 30px;
-            min-height: 60px;
-        }
-
-        .pricing-card.featured .pricing-description {
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .features-highlight {
-            background: #f7fafc;
-            padding: 20px;
-            border-radius: 15px;
-            margin: 25px 0;
-            border-left: 4px solid #4285F4;
-        }
-
-        .pricing-card.featured .features-highlight {
-            background: rgba(255, 255, 255, 0.1);
-            border-left-color: #FF6F00;
-        }
-
-        .highlight-text {
-            font-weight: 600;
-            color: #2d3748;
-            font-size: 0.95rem;
-        }
-
-        .pricing-card.featured .highlight-text {
-            color: white;
-        }
-
-        /* Enhanced Contact Form */
+        /* Contact Form */
         .contact-form {
             padding: 100px 0;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
@@ -943,21 +755,8 @@ The ImpelDown Team
             z-index: 1;
         }
 
-        .form-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, rgba(255, 111, 0, 0.05), rgba(66, 133, 244, 0.05));
-            border-radius: 25px;
-            z-index: -1;
-        }
-
         .form-group {
             margin-bottom: 25px;
-            position: relative;
         }
 
         .form-group label {
@@ -1018,15 +817,22 @@ The ImpelDown Team
             box-shadow: 0 15px 35px rgba(255, 111, 0, 0.4);
         }
 
-        .submit-btn:active {
-            transform: translateY(-1px);
+        .success-message {
+            display: none;
+            background: linear-gradient(45deg, #4ecdc4, #51cf66);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
         }
 
-        /* Footer and other sections remain the same */
+        /* Footer */
         footer {
             background: #1a202c;
             color: white;
             padding: 60px 0 30px;
+            margin-top: auto;
         }
 
         .footer-content {
@@ -1083,67 +889,49 @@ The ImpelDown Team
             color: #a0aec0;
         }
 
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 2000;
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 24px;
-            cursor: pointer;
-            color: #666;
-        }
-
-        .success-message {
-            display: none;
-            background: linear-gradient(45deg, #4ecdc4, #51cf66);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            margin-top: 20px;
-        }
-
+        /* Mobile Responsive - Enhanced */
         @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .nav {
+                justify-content: space-between;
+                align-items: center;
+            }
+
             .hero h1 {
-                font-size: 2.5rem;
+                font-size: 2.2rem;
+                line-height: 1.2;
+                padding: 0 15px;
+            }
+
+            .changing-text {
+                display: block;
+                height: 1.2em;
+                position: relative;
             }
             
             .hero p {
-                font-size: 1.1rem;
+                font-size: 1rem;
+                padding: 0 20px;
+                line-height: 1.5;
             }
             
             .hero-buttons {
                 flex-direction: column;
                 align-items: center;
+                gap: 15px;
+                padding: 0 20px;
             }
-            
-            .nav-links {
-                display: none;
+
+            .cta-button, .btn-secondary {
+                width: auto;
+                min-width: 200px;
+                max-width: 280px;
+                text-align: center;
+                font-size: 0.9rem;
+                padding: 14px 20px;
             }
             
             .form-row {
@@ -1151,108 +939,127 @@ The ImpelDown Team
             }
             
             .features-grid,
-            .pricing-grid,
             .portfolio-grid {
                 grid-template-columns: 1fr;
+                gap: 30px;
             }
 
-            .timeline-line {
-                left: 40px;
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
             }
 
-            .process-step {
-                flex-direction: row !important;
-                margin-left: 80px;
+            .stat-number {
+                font-size: 2.2rem;
             }
 
-            .step-number {
-                width: 60px;
-                height: 60px;
-                position: absolute;
-                left: -80px;
+            .stat-label {
+                font-size: 1rem;
             }
 
-            .step-content {
-                margin: 0;
+            .feature-card,
+            .portfolio-item {
+                margin: 0 10px;
+            }
+
+            .container {
+                padding: 0 15px;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+                padding: 0 15px;
+                line-height: 1.3;
+            }
+
+            .form-container {
+                margin: 0 10px;
+                padding: 30px 20px;
+            }
+
+            .portfolio-image {
+                height: 240px;
+            }
+
+            .logo {
+                font-size: 22px;
+            }
+
+            .logo-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 14px;
+            }
+
+            /* Fix pricing cards on mobile */
+            .pricing-grid {
+                gap: 20px;
+            }
+
+            .pricing-card {
+                padding: 25px 20px;
+            }
+
+            .pricing-card h3 {
+                font-size: 1.3rem;
+            }
+
+            .price {
+                font-size: 2.5rem;
             }
         }
 
-        .floating-elements {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            overflow: hidden;
-        }
+        /* Extra small screens */
+        @media (max-width: 480px) {
+            .hero {
+                padding: 120px 0 80px;
+            }
 
-        .floating-element {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            animation: float-around 20s infinite linear;
-        }
+            .hero h1 {
+                font-size: 1.8rem;
+                padding: 0 10px;
+            }
 
-        .floating-element:nth-child(1) {
-            width: 60px;
-            height: 60px;
-            top: 20%;
-            left: 10%;
-            animation-delay: 0s;
-        }
+            .hero p {
+                font-size: 0.95rem;
+                padding: 0 15px;
+            }
 
-        .floating-element:nth-child(2) {
-            width: 40px;
-            height: 40px;
-            top: 60%;
-            right: 15%;
-            animation-delay: -7s;
-        }
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
 
-        .floating-element:nth-child(3) {
-            width: 80px;
-            height: 80px;
-            bottom: 30%;
-            left: 20%;
-            animation-delay: -14s;
-        }
+            .stat-number {
+                font-size: 2rem;
+            }
 
-        @keyframes float-around {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            33% { transform: translate(30px, -30px) rotate(120deg); }
-            66% { transform: translate(-20px, 20px) rotate(240deg); }
-            100% { transform: translate(0, 0) rotate(360deg); }
-        }
+            .stat-label {
+                font-size: 0.9rem;
+            }
 
-        .stats-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 80px 0;
-            color: white;
-            text-align: center;
-        }
+            .section-title {
+                font-size: 1.6rem;
+            }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 40px;
-            margin-top: 40px;
-        }
+            .cta-button, .btn-secondary {
+                min-width: 180px;
+                font-size: 0.85rem;
+                padding: 12px 16px;
+            }
 
-        .stat-item {
-            padding: 20px;
-        }
+            .nav {
+                padding: 0 10px;
+            }
 
-        .stat-number {
-            font-size: 3rem;
-            font-weight: 800;
-            color: #FF6F00;
-            margin-bottom: 10px;
-        }
+            .logo {
+                font-size: 20px;
+            }
 
-        .stat-label {
-            font-size: 1.1rem;
-            opacity: 0.9;
+            .logo-icon {
+                width: 35px;
+                height: 35px;
+            }
         }
     </style>
 </head>
@@ -1261,13 +1068,15 @@ The ImpelDown Team
         <div class="container">
             <nav class="nav">
                 <a href="#" class="logo">
-                    <div class="logo-icon"></div>
+                    <div class="logo-icon">
+                        <img src="Assets/Logo/Logo.png" alt="ImpelDown Logo" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; background: linear-gradient(135deg, #4285F4, #FF6F00); border-radius: 12px; color: white; font-weight: 900; font-size: 18px;">ID</div>
+                    </div>
                     ImpelDown
                 </a>
                 <ul class="nav-links">
                     <li><a href="#services">Services</a></li>
                     <li><a href="#portfolio">Portfolio</a></li>
-                    <li><a href="#process">Process</a></li>
                     <li><a href="#pricing">Pricing</a></li>
                     <li><a href="#contact">Contact</a></li>
                 </ul>
@@ -1276,18 +1085,14 @@ The ImpelDown Team
         </div>
     </header>
 
-    <section class="hero gradient-bg">
-        <div class="floating-elements">
-            <div class="floating-element"></div>
-            <div class="floating-element"></div>
-            <div class="floating-element"></div>
-        </div>
+    <main>
+        <section class="hero gradient-bg">
         <div class="container">
             <h1>Your Vision, Built at Lightning Speed</h1>
             <p>Transform your app ideas into fully functional startups in just 30 days. We specialize in FlutterFlow development to bring your concepts to market faster than ever.</p>
             <div class="hero-buttons">
                 <a href="#contact" class="cta-button">Get Your Free Consultation</a>
-                <a href="#process" class="btn-secondary">See Our Process</a>
+                <a href="#services" class="btn-secondary">See Our Services</a>
             </div>
         </div>
     </section>
@@ -1297,19 +1102,19 @@ The ImpelDown Team
             <h2 style="font-size: 2rem; margin-bottom: 20px;">Trusted by Startups Worldwide</h2>
             <div class="stats-grid">
                 <div class="stat-item">
-                    <div class="stat-number">50+</div>
+                    <div class="stat-number" data-target="50">0</div>
                     <div class="stat-label">Apps Delivered</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">30</div>
+                    <div class="stat-number" data-target="30">0</div>
                     <div class="stat-label">Days Average Delivery</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">95%</div>
+                    <div class="stat-number" data-target="95">0</div>
                     <div class="stat-label">Client Satisfaction</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">24/7</div>
+                    <div class="stat-number" data-target="24">0</div>
                     <div class="stat-label">Support Available</div>
                 </div>
             </div>
@@ -1321,44 +1126,32 @@ The ImpelDown Team
             <h2 class="section-title">Why Choose ImpelDown?</h2>
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <i data-lucide="smartphone" style="color: white;"></i>
-                    </div>
+                    <div class="feature-icon">💻</div>
                     <h3>FlutterFlow Specialists</h3>
                     <p>We're experts in FlutterFlow development, ensuring your app is built with the latest no-code/low-code technology for maximum efficiency and performance.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <i data-lucide="rocket" style="color: white;"></i>
-                    </div>
+                    <div class="feature-icon">⚡</div>
                     <h3>Lightning Fast Delivery</h3>
                     <p>From concept to app store, we deliver your MVP in just 30 days. No more waiting months for your vision to become reality.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <i data-lucide="database" style="color: white;"></i>
-                    </div>
+                    <div class="feature-icon">🗄️</div>
                     <h3>Full Backend Integration</h3>
                     <p>Complete backend setup with Firebase, user authentication, real-time data, and all the infrastructure your app needs to scale.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <i data-lucide="trending-up" style="color: white;"></i>
-                    </div>
+                    <div class="feature-icon">🤝</div>
                     <h3>Startup Partnership</h3>
                     <p>We believe in your vision. Choose our partnership model and we'll help build your startup for equity, aligning our success with yours.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <i data-lucide="shield-check" style="color: white;"></i>
-                    </div>
+                    <div class="feature-icon">🛡️</div>
                     <h3>Post-Launch Support</h3>
                     <p>30 days of free support after launch, plus ongoing maintenance packages to keep your app running smoothly.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <i data-lucide="users" style="color: white;"></i>
-                    </div>
+                    <div class="feature-icon">👥</div>
                     <h3>Dedicated Team</h3>
                     <p>A full team of developers, designers, and project managers dedicated to making your app a success.</p>
                 </div>
@@ -1366,133 +1159,67 @@ The ImpelDown Team
         </div>
     </section>
 
-    <section id="portfolio" class="portfolio">
+     <section id="portfolio" class="portfolio">
         <div class="container">
             <h2 class="section-title">Our Success Stories</h2>
             <p style="text-align: center; font-size: 1.2rem; color: #4a5568; margin-bottom: 20px;">See the amazing apps we've built for entrepreneurs just like you</p>
             <div class="portfolio-grid">
                 <div class="portfolio-item">
                     <div class="portfolio-image">
-                        <div class="phone-mockup">
-                            <div class="phone-screen">
-                                <div style="background: linear-gradient(135deg, #667eea, #764ba2); height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                    EcoReceipt
-                                </div>
-                            </div>
-                        </div>
+                        <img src="assets/Car hiring app/Car hiring app.png" alt="Car Hiring App">
                     </div>
                     <div class="portfolio-content">
-                        <h3>EcoReceipt - Budget Tracker</h3>
-                        <p>A comprehensive expense tracking app that helps users manage their finances with AI-powered insights and real-time analytics.</p>
+                        <h3>Car Hiring App</h3>
+                        <p>Complete car rental platform with real-time availability, booking management, GPS tracking, and secure payment integration for seamless vehicle rentals.</p>
                         <div class="portfolio-tags">
                             <span class="tag">FlutterFlow</span>
-                            <span class="tag">Firebase</span>
-                            <span class="tag">AI Integration</span>
+                            <span class="tag">GPS Integration</span>
+                            <span class="tag">Payment Gateway</span>
                         </div>
                     </div>
                 </div>
                 
                 <div class="portfolio-item">
                     <div class="portfolio-image">
-                        <div class="phone-mockup">
-                            <div class="phone-screen">
-                                <div style="background: linear-gradient(135deg, #FF6B6B, #4ECDC4); height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                    FoodieHub
-                                </div>
-                            </div>
-                        </div>
+                        <img src="assets/Event app/Event app.png" alt="Event App">
                     </div>
                     <div class="portfolio-content">
-                        <h3>FoodieHub - Restaurant App</h3>
-                        <p>Multi-vendor food delivery platform connecting local restaurants with customers, featuring real-time tracking and payment integration.</p>
+                        <h3>Event Management App</h3>
+                        <p>Comprehensive event planning platform with ticket booking, attendee management, real-time notifications, and social networking features.</p>
+                        <div class="portfolio-tags">
+                            <span class="tag">Event Management</span>
+                            <span class="tag">Social Features</span>
+                            <span class="tag">Real-time Updates</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="portfolio-item">
+                    <div class="portfolio-image">
+                        <img src="assets/Food delivery app/Food delivery app.png" alt="Food Delivery App">
+                    </div>
+                    <div class="portfolio-content">
+                        <h3>Food Delivery Platform</h3>
+                        <p>Multi-vendor food delivery app with restaurant management, real-time order tracking, delivery optimization, and customer rating system.</p>
                         <div class="portfolio-tags">
                             <span class="tag">Multi-vendor</span>
-                            <span class="tag">Payment Gateway</span>
                             <span class="tag">Real-time Tracking</span>
+                            <span class="tag">Rating System</span>
                         </div>
                     </div>
                 </div>
                 
                 <div class="portfolio-item">
                     <div class="portfolio-image">
-                        <div class="phone-mockup">
-                            <div class="phone-screen">
-                                <div style="background: linear-gradient(135deg, #A8E6CF, #7FCDCD); height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                    HealthTrack
-                                </div>
-                            </div>
-                        </div>
+                        <img src="assets/Receipt app/Receipt_app.png" alt="Receipt App">
                     </div>
                     <div class="portfolio-content">
-                        <h3>HealthTrack - Wellness App</h3>
-                        <p>Personal health monitoring app with appointment scheduling, medication reminders, and integration with wearable devices.</p>
+                        <h3>Smart Receipt Manager</h3>
+                        <p>Digital receipt management with OCR scanning, expense categorization, tax calculation, and comprehensive financial reporting features.</p>
                         <div class="portfolio-tags">
-                            <span class="tag">Healthcare</span>
-                            <span class="tag">Wearable Integration</span>
-                            <span class="tag">Appointment System</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="portfolio-item">
-                    <div class="portfolio-image">
-                        <div class="phone-mockup">
-                            <div class="phone-screen">
-                                <div style="background: linear-gradient(135deg, #FFD93D, #FF6B6B); height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                    LearnSpace
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="portfolio-content">
-                        <h3>LearnSpace - Education Platform</h3>
-                        <p>Interactive learning platform for students with video courses, quizzes, progress tracking, and peer-to-peer collaboration tools.</p>
-                        <div class="portfolio-tags">
-                            <span class="tag">EdTech</span>
-                            <span class="tag">Video Streaming</span>
-                            <span class="tag">Progress Analytics</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="portfolio-item">
-                    <div class="portfolio-image">
-                        <div class="phone-mockup">
-                            <div class="phone-screen">
-                                <div style="background: linear-gradient(135deg, #C7CEEA, #B19CD9); height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                    TaskMaster
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="portfolio-content">
-                        <h3>TaskMaster - Productivity Suite</h3>
-                        <p>All-in-one productivity app combining task management, team collaboration, time tracking, and project analytics for businesses.</p>
-                        <div class="portfolio-tags">
-                            <span class="tag">Productivity</span>
-                            <span class="tag">Team Collaboration</span>
-                            <span class="tag">Analytics Dashboard</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="portfolio-item">
-                    <div class="portfolio-image">
-                        <div class="phone-mockup">
-                            <div class="phone-screen">
-                                <div style="background: linear-gradient(135deg, #FF9A9E, #FECFEF); height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                    ShopLocal
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="portfolio-content">
-                        <h3>ShopLocal - Marketplace</h3>
-                        <p>Local marketplace connecting small businesses with their community, featuring inventory management and customer loyalty programs.</p>
-                        <div class="portfolio-tags">
-                            <span class="tag">E-commerce</span>
-                            <span class="tag">Inventory Management</span>
-                            <span class="tag">Loyalty System</span>
+                            <span class="tag">OCR Technology</span>
+                            <span class="tag">Financial Reports</span>
+                            <span class="tag">Tax Management</span>
                         </div>
                     </div>
                 </div>
@@ -1500,96 +1227,50 @@ The ImpelDown Team
         </div>
     </section>
 
-    <section id="process" class="process">
-        <div class="container process-container">
-            <h2 class="section-title" style="color: white;">Our Proven Process</h2>
-            <p style="text-align: center; color: rgba(255,255,255,0.9); font-size: 1.2rem; margin-bottom: 20px;">From idea to app store in just 4 simple steps</p>
-            <div class="process-timeline">
-                <div class="timeline-line"></div>
-                
-                <div class="process-step">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h3>🎯 Discovery & Strategy</h3>
-                        <p>We dive deep into your vision, target audience, market research, and business goals to create the perfect roadmap. This includes competitive analysis and feature prioritization.</p>
-                    </div>
-                </div>
-                
-                <div class="process-step">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h3>🎨 Design & Architecture</h3>
-                        <p>Our design team creates stunning UI/UX wireframes, user flows, and technical architecture. We ensure your app is both beautiful and technically sound before development begins.</p>
-                    </div>
-                </div>
-                
-                <div class="process-step">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h3>⚡ FlutterFlow Development</h3>
-                        <p>Using FlutterFlow's powerful platform, we build your app with real-time updates and feedback loops. You'll see your app come to life with daily progress updates.</p>
-                    </div>
-                </div>
-                
-                <div class="process-step">
-                    <div class="step-number">4</div>
-                    <div class="step-content">
-                        <h3>🚀 Launch & Scale</h3>
-                        <p>Comprehensive testing, app store optimization, deployment, and ongoing support. We don't just launch your app - we help it succeed with post-launch growth strategies.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="pricing" class="pricing">
+    <section id="pricing" class="features" style="background: #f8fafc;">
         <div class="container">
             <h2 class="section-title">Choose Your Success Path</h2>
-            <p style="text-align: center; font-size: 1.2rem; color: #4a5568; margin-bottom: 20px;">Flexible solutions designed to fit your budget and ambitions</p>
-            <div class="pricing-grid">
-                <div class="pricing-card">
-                    <div class="pricing-header">
-                        <h3>🚀 Rapid MVP</h3>
-                        <div class="price">$2,999</div>
-                        <p class="price-subtitle">Perfect for testing your concept quickly</p>
+            <p style="text-align: center; font-size: 1.2rem; color: #4a5568; margin-bottom: 40px;">Flexible solutions designed to fit your budget and ambitions</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 40px; margin-top: 60px;">
+                <!-- MVP Package -->
+                <div class="feature-card" style="position: relative;">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Rapid MVP</h3>
+                    <div style="font-size: 2.5rem; font-weight: 800; color: #4285F4; margin: 20px 0;">$2,999</div>
+                    <p style="font-style: italic; margin-bottom: 20px;">Perfect for testing your concept quickly</p>
+                    <p>Get your idea validated with a functional MVP that captures the core value proposition of your startup.</p>
+                    <div style="background: linear-gradient(135deg, #f1f5f9, #e2e8f0); padding: 15px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #4285F4;">
+                        <strong>✨ 7-day delivery guarantee</strong> with core features that prove your concept works in the market.
                     </div>
-                    <div class="pricing-description">
-                        Get your idea validated with a functional MVP that captures the core value proposition of your startup.
-                    </div>
-                    <div class="features-highlight">
-                        <div class="highlight-text">✨ What makes this special: 7-day delivery guarantee with core features that prove your concept works in the market.</div>
-                    </div>
-                    <button class="cta-button" onclick="openBookingModal('Rapid MVP')">Choose This Path</button>
+                    <a href="#contact" class="cta-button" style="width: 100%; text-align: center; margin-top: 20px;">Choose This Path</a>
                 </div>
-                
-                <div class="pricing-card featured">
-                    <div class="pricing-header">
-                        <h3>💼 Startup Pro</h3>
-                        <div class="price">$7,999</div>
-                        <p class="price-subtitle">Complete startup-ready solution</p>
+
+                <!-- Startup Pro Package (Featured) -->
+                <div class="feature-card" style="position: relative; transform: scale(1.05); border: 3px solid #4285F4; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div style="position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: linear-gradient(45deg, #FF6F00, #4285F4); color: white; padding: 8px 25px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; box-shadow: 0 5px 15px rgba(255, 111, 0, 0.3);">Most Popular</div>
+                    <div class="feature-icon" style="background: rgba(255, 255, 255, 0.2);">💼</div>
+                    <h3 style="color: white;">Startup Pro</h3>
+                    <div style="font-size: 2.5rem; font-weight: 800; color: white; margin: 20px 0;">$7,999</div>
+                    <p style="font-style: italic; margin-bottom: 20px; color: rgba(255, 255, 255, 0.9);">Complete startup-ready solution</p>
+                    <p style="color: rgba(255, 255, 255, 0.9);">Everything you need to launch and scale your startup with professional-grade features and integrations.</p>
+                    <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #FF6F00;">
+                        <strong style="color: white;">🏆 Full-featured app</strong> with advanced integrations, admin dashboard, and scalable architecture built for growth.
                     </div>
-                    <div class="pricing-description">
-                        Everything you need to launch and scale your startup with professional-grade features and integrations.
-                    </div>
-                    <div class="features-highlight">
-                        <div class="highlight-text">🏆 Most Popular: Full-featured app with advanced integrations, admin dashboard, and scalable architecture built for growth.</div>
-                    </div>
-                    <button class="cta-button" onclick="openBookingModal('Startup Pro')">Choose This Path</button>
+                    <a href="#contact" class="cta-button" style="width: 100%; text-align: center; margin-top: 20px; background: rgba(255, 255, 255, 0.2); border: 2px solid white;">Choose This Path</a>
                 </div>
-                
-                <div class="pricing-card">
-                    <div class="pricing-header">
-                        <h3>🤝 Partnership Model</h3>
-                        <div class="price">15%</div>
-                        <p class="price-subtitle">Revenue share for 3 years</p>
+
+                <!-- Partnership Package -->
+                <div class="feature-card" style="position: relative;">
+                    <div class="feature-icon">🤝</div>
+                    <h3>Partnership Model</h3>
+                    <div style="font-size: 2.5rem; font-weight: 800; color: #4285F4; margin: 20px 0;">15%</div>
+                    <p style="font-style: italic; margin-bottom: 20px;">Revenue share for 3 years</p>
+                    <p>Zero upfront costs. We invest in your success and share in the revenue when your app succeeds.</p>
+                    <div style="background: linear-gradient(135deg, #f1f5f9, #e2e8f0); padding: 15px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #4285F4;">
+                        <strong>💎 Ultimate Value:</strong> Everything in Startup Pro + ongoing development, marketing support, and shared success model.
                     </div>
-                    <div class="pricing-description">
-                        Zero upfront costs. We invest in your success and share in the revenue when your app succeeds.
-                    </div>
-                    <div class="features-highlight">
-                        <div class="highlight-text">💎 Ultimate Value: Everything in Startup Pro + ongoing development, marketing support, and shared success model.</div>
-                    </div>
-                    <button class="cta-button" onclick="openBookingModal('Partnership Model')">Apply for Partnership</button>
+                    <a href="#contact" class="cta-button" style="width: 100%; text-align: center; margin-top: 20px;">Apply for Partnership</a>
                 </div>
             </div>
         </div>
@@ -1598,89 +1279,42 @@ The ImpelDown Team
     <section id="contact" class="contact-form">
         <div class="container">
             <div class="form-container">
-                <div class="form-header">
-                    <h2>Ready to Transform Your Idea Into Reality?</h2>
-                    <p>Let's discuss your project and create something amazing together</p>
-                    <div class="form-steps">
-                        <div class="step-indicator">
-                            <div class="step-number-indicator">1</div>
-                            <span>Tell us about your project</span>
-                        </div>
-                        <div class="step-indicator">
-                            <div class="step-number-indicator">2</div>
-                            <span>Get instant proposal</span>
-                        </div>
-                        <div class="step-indicator">
-                            <div class="step-number-indicator">3</div>
-                            <span>Schedule consultation</span>
-                        </div>
-                    </div>
+                <div style="text-align: center; margin-bottom: 40px;">
+                    <h2 style="font-size: 2.5rem; margin-bottom: 15px;">Ready to Transform Your Idea Into Reality?</h2>
+                    <p style="font-size: 1.2rem; opacity: 0.9;">Let's discuss your project and create something amazing together</p>
                 </div>
                 
                 <form id="contactForm">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="firstName">
-                                <div class="label-icon">👤</div>
-                                First Name *
-                            </label>
-                            <div class="input-with-icon">
-                                <input type="text" id="firstName" name="firstName" required placeholder="John">
-                                <div class="input-icon">✨</div>
-                            </div>
+                            <label for="firstName">👤 First Name *</label>
+                            <input type="text" id="firstName" name="firstName" required placeholder="John">
                         </div>
                         <div class="form-group">
-                            <label for="lastName">
-                                <div class="label-icon">👤</div>
-                                Last Name *
-                            </label>
-                            <div class="input-with-icon">
-                                <input type="text" id="lastName" name="lastName" required placeholder="Doe">
-                                <div class="input-icon">✨</div>
-                            </div>
+                            <label for="lastName">👤 Last Name *</label>
+                            <input type="text" id="lastName" name="lastName" required placeholder="Doe">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="email">
-                                <div class="label-icon">📧</div>
-                                Email Address *
-                            </label>
-                            <div class="input-with-icon">
-                                <input type="email" id="email" name="email" required placeholder="john@example.com">
-                                <div class="input-icon">📬</div>
-                            </div>
+                            <label for="email">📧 Email Address *</label>
+                            <input type="email" id="email" name="email" required placeholder="john@example.com">
                         </div>
                         <div class="form-group">
-                            <label for="phone">
-                                <div class="label-icon">📱</div>
-                                Phone Number
-                            </label>
-                            <div class="input-with-icon">
-                                <input type="tel" id="phone" name="phone" placeholder="+1 (555) 123-4567">
-                                <div class="input-icon">📞</div>
-                            </div>
+                            <label for="phone">📱 Phone Number</label>
+                            <input type="tel" id="phone" name="phone" placeholder="+1 (555) 123-4567">
                         </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="company">
-                            <div class="label-icon">🏢</div>
-                            Company/Organization
-                        </label>
-                        <div class="input-with-icon">
-                            <input type="text" id="company" name="company" placeholder="Your Company Name">
-                            <div class="input-icon">🏆</div>
-                        </div>
+                        <label for="company">🏢 Company/Organization</label>
+                        <input type="text" id="company" name="company" placeholder="Your Company Name (Optional)">
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="projectType">
-                                <div class="label-icon">🚀</div>
-                                What do you need? *
-                            </label>
+                            <label for="projectType">🚀 What do you need? *</label>
                             <select id="projectType" name="projectType" required>
                                 <option value="">Select your project type</option>
                                 <option value="mvp">🚀 Rapid MVP Development</option>
@@ -1691,10 +1325,7 @@ The ImpelDown Team
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="budget">
-                                <div class="label-icon">💰</div>
-                                Investment Range
-                            </label>
+                            <label for="budget">💰 Investment Range</label>
                             <select id="budget" name="budget">
                                 <option value="">Select your budget</option>
                                 <option value="under-5k">💸 Under $5,000</option>
@@ -1708,10 +1339,7 @@ The ImpelDown Team
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="timeline">
-                                <div class="label-icon">⏰</div>
-                                When do you want to launch?
-                            </label>
+                            <label for="timeline">⏰ When do you want to launch?</label>
                             <select id="timeline" name="timeline">
                                 <option value="">Select timeline</option>
                                 <option value="asap">⚡ ASAP (Rush delivery available)</option>
@@ -1721,10 +1349,7 @@ The ImpelDown Team
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="industry">
-                                <div class="label-icon">🎯</div>
-                                Industry/Market
-                            </label>
+                            <label for="industry">🎯 Industry/Market</label>
                             <select id="industry" name="industry">
                                 <option value="">Select your industry</option>
                                 <option value="fintech">💰 FinTech/Finance</option>
@@ -1740,42 +1365,33 @@ The ImpelDown Team
                     </div>
                     
                     <div class="form-group">
-                        <label for="description">
-                            <div class="label-icon">💡</div>
-                            Tell us about your vision *
-                        </label>
+                        <label for="description">💡 Tell us about your vision *</label>
                         <textarea id="description" name="description" rows="5" required placeholder="Describe your app idea, target audience, key features, and what success looks like for you. The more details you share, the better we can help you! 
 
 For example: 'I want to create a fitness app that tracks workouts and connects users with personal trainers. My target audience is busy professionals aged 25-40...'"></textarea>
                     </div>
                     
-                    <div class="submit-section">
-                        <button type="submit" class="submit-btn">
-                            <div class="loading-spinner"></div>
-                            <span class="btn-text">🚀 Start My Project Journey</span>
-                        </button>
-                        
-                        <div class="calendly-section">
-                            <p style="margin-bottom: 15px; font-size: 1.1rem; opacity: 0.9;">
-                                Or schedule a call directly:
-                            </p>
-                            <a href="#" class="calendly-btn" onclick="openCalendly()">
-                                📅 Book Free 30-Min Consultation
-                            </a>
-                        </div>
+                    <button type="submit" class="submit-btn">
+                        🚀 Start My Project Journey
+                    </button>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <p style="margin-bottom: 15px; font-size: 1.1rem; opacity: 0.9;">
+                            Or schedule a call directly:
+                        </p>
+                        <a href="https://calendly.com/impeldown/consultation" target="_blank" style="background: rgba(255, 255, 255, 0.2); color: white; padding: 15px 30px; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 25px; text-decoration: none; font-weight: 600; display: inline-block; transition: all 0.3s ease;">
+                            📅 Book Free 30-Min Consultation
+                        </a>
                     </div>
                     
                     <div class="success-message" id="successMessage">
                         🎉 <strong>Thank you!</strong> We've received your project details and will get back to you within 24 hours with a customized proposal. Check your email for confirmation!
                     </div>
-                    
-                    <div class="error-message" id="errorMessage">
-                        ❌ Something went wrong. Please try again or contact us directly at hello@impeldown.co
-                    </div>
                 </form>
             </div>
         </div>
     </section>
+    </main>
 
     <footer>
         <div class="container">
@@ -1784,18 +1400,10 @@ For example: 'I want to create a fitness app that tracks workouts and connects u
                     <h3>ImpelDown</h3>
                     <p>Transforming app ideas into successful startups with FlutterFlow expertise and lightning-fast delivery.</p>
                     <div class="social-links">
-                        <a href="https://web.facebook.com/profile.php?id=61573161593002" target="_blank">
-                            <i data-lucide="facebook"></i>
-                        </a>
-                        <a href="https://www.fiverr.com/s/385Yg8A" target="_blank">
-                            <i data-lucide="briefcase"></i>
-                        </a>
-                        <a href="#" target="_blank">
-                            <i data-lucide="linkedin"></i>
-                        </a>
-                        <a href="#" target="_blank">
-                            <i data-lucide="twitter"></i>
-                        </a>
+                        <a href="https://web.facebook.com/profile.php?id=61573161593002" target="_blank">📘</a>
+                        <a href="https://www.fiverr.com/s/385Yg8A" target="_blank">💼</a>
+                        <a href="#" target="_blank">💼</a>
+                        <a href="#" target="_blank">🐦</a>
                     </div>
                 </div>
                 <div class="footer-section">
@@ -1816,147 +1424,195 @@ For example: 'I want to create a fitness app that tracks workouts and connects u
                 </div>
                 <div class="footer-section">
                     <h3>Contact Info</h3>
-                    <p>Email: hello@impeldown.co</p>
-                    <p>WhatsApp: +260 XX XXX XXXX</p>
-                    <p>Location: Ndola, Copperbelt, Zambia</p>
-                    <p>Timezone: CAT (UTC+2)</p>
+                    <p>Email: hello@impeldown.dev</p>
+                    <p>WhatsApp: +1 (304) 215-2098</p>
+                    <p>Location: 1702 Veneto Drive, Rockwall, Texas 75032</p>
+                    <p>Timezone: CST (UTC-6)</p>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 ImpelDown. All rights reserved. | Privacy Policy | Terms of Service</p>
+                <p>&copy; 2025 ImpelDown. All rights reserved.</p>
             </div>
         </div>
     </footer>
 
-    <!-- Booking Modal -->
-    <div id="bookingModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal" onclick="closeBookingModal()">&times;</span>
-            <h2 id="modalTitle">Book Your Project</h2>
-            <form id="bookingForm">
-                <input type="hidden" id="selectedPlan" name="selectedPlan">
-                <div class="form-group">
-                    <label for="modalName">Full Name *</label>
-                    <input type="text" id="modalName" name="modalName" required>
-                </div>
-                <div class="form-group">
-                    <label for="modalEmail">Email *</label>
-                    <input type="email" id="modalEmail" name="modalEmail" required>
-                </div>
-                <div class="form-group">
-                    <label for="modalPhone">Phone Number *</label>
-                    <input type="tel" id="modalPhone" name="modalPhone" required>
-                </div>
-                <div class="form-group">
-                    <label for="modalProject">Project Description *</label>
-                    <textarea id="modalProject" name="modalProject" rows="4" required placeholder="Tell us about your app idea..."></textarea>
-                </div>
-                <button type="submit" class="cta-button">Book Free Consultation</button>
-            </form>
-        </div>
-    </div>
-
     <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
-
-        // Form submission handler
-        document.getElementById('contactForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Collect form data
-            const formData = new FormData(this);
-            const data = Object.fromEntries(formData);
-            
-            // Here you would typically send the data to your backend
-            console.log('Form submitted:', data);
-            
-            // Show success message
-            document.getElementById('successMessage').style.display = 'block';
-            
-            // Reset form
-            this.reset();
-            
-            // Hide success message after 5 seconds
-            setTimeout(() => {
-                document.getElementById('successMessage').style.display = 'none';
-            }, 5000);
-        });
-
-        // Booking modal functions
-        function openBookingModal(planName) {
-            document.getElementById('modalTitle').textContent = `Book ${planName}`;
-            document.getElementById('selectedPlan').value = planName;
-            document.getElementById('bookingModal').style.display = 'block';
-        }
-
-        function closeBookingModal() {
-            document.getElementById('bookingModal').style.display = 'none';
-        }
-
-        // Booking form submission
-        document.getElementById('bookingForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const data = Object.fromEntries(formData);
-            
-            console.log('Booking submitted:', data);
-            
-            alert('Thank you! We\'ll contact you within 24 hours to schedule your free consultation.');
-            closeBookingModal();
-            this.reset();
-        });
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('bookingModal');
-            if (event.target == modal) {
-                closeBookingModal();
+        // Wait for DOM to load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create floating particles
+            function createParticles() {
+                const hero = document.querySelector('.hero');
+                const particleCount = 15;
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    
+                    // Random size between 2-6px
+                    const size = Math.random() * 4 + 2;
+                    particle.style.width = size + 'px';
+                    particle.style.height = size + 'px';
+                    
+                    // Random position
+                    particle.style.left = Math.random() * 100 + '%';
+                    particle.style.top = Math.random() * 100 + '%';
+                    
+                    // Random animation delay
+                    particle.style.animationDelay = Math.random() * 8 + 's';
+                    
+                    hero.appendChild(particle);
+                }
             }
-        }
+            
+            // Initialize particles
+            createParticles();
+            // Counter Animation for Stats
+            function animateCounters() {
+                const counters = document.querySelectorAll('.stat-number');
+                const observerOptions = {
+                    threshold: 0.5,
+                    rootMargin: '0px 0px -100px 0px'
+                };
 
-        // Smooth scrolling for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const counter = entry.target;
+                            const target = parseInt(counter.getAttribute('data-target'));
+                            const duration = 2000; // 2 seconds
+                            const step = target / (duration / 16); // 60fps
+                            let current = 0;
+
+                            counter.classList.add('animate');
+
+                            const updateCounter = () => {
+                                current += step;
+                                if (current < target) {
+                                    counter.textContent = Math.floor(current) + (target === 95 ? '%' : target === 24 ? '/7' : target > 30 ? '+' : '');
+                                    requestAnimationFrame(updateCounter);
+                                } else {
+                                    counter.textContent = target + (target === 95 ? '%' : target === 24 ? '/7' : target > 30 ? '+' : '');
+                                }
+                            };
+
+                            updateCounter();
+                            observer.unobserve(counter);
+                        }
                     });
-                }
-            });
-        });
+                }, observerOptions);
 
-        // Header scroll effect
-        window.addEventListener('scroll', function() {
-            const header = document.querySelector('header');
-            if (window.scrollY > 100) {
-                header.style.background = 'rgba(30, 60, 114, 0.95)';
-            } else {
-                header.style.background = 'rgba(255, 255, 255, 0.1)';
+                counters.forEach(counter => observer.observe(counter));
             }
-        });
 
-        // Add intersection observer for animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
+            // Initialize counter animation
+            animateCounters();
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.animationPlayState = 'running';
+            // Text reveal animation
+            const textAnimateElements = document.querySelectorAll('.text-animate');
+            const textObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationPlayState = 'running';
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            textAnimateElements.forEach(el => textObserver.observe(el));
+            // Enhanced form submission
+            document.getElementById('contactForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Show loading state
+                const submitBtn = document.querySelector('.submit-btn');
+                const successMessage = document.getElementById('successMessage');
+                
+                submitBtn.textContent = 'Sending your project details...';
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.7';
+                
+                // Hide any previous messages
+                successMessage.style.display = 'none';
+                
+                // Collect form data
+                const formData = new FormData(this);
+                const data = Object.fromEntries(formData);
+                
+                // Simulate processing time for better UX
+                setTimeout(() => {
+                    // Show success message
+                    successMessage.style.display = 'block';
+                    successMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    
+                    // Reset form
+                    this.reset();
+                    
+                    // Reset button
+                    submitBtn.textContent = '🚀 Start My Project Journey';
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    
+                    // Auto-suggest consultation booking
+                    setTimeout(() => {
+                        if (confirm('🎉 Thank you for your submission! Would you like to schedule a free consultation call right now?')) {
+                            window.open('https://calendly.com/impeldown/consultation', '_blank');
+                        }
+                    }, 2000);
+                }, 1500);
+            });
+
+            // Smooth scrolling for navigation links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+
+            // Header scroll effect
+            window.addEventListener('scroll', function() {
+                const header = document.querySelector('header');
+                const scrollPosition = window.scrollY;
+                
+                if (scrollPosition > 50) {
+                    header.style.background = 'rgba(30, 60, 114, 0.95)';
+                    header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.15)';
+                    header.style.padding = '12px 0';
+                } else {
+                    header.style.background = 'rgba(30, 60, 114, 0.9)';
+                    header.style.boxShadow = 'none';
+                    header.style.padding = '15px 0';
                 }
             });
-        }, observerOptions);
 
-        // Observe all elements with animations
-        document.querySelectorAll('.process-step').forEach(step => {
-            observer.observe(step);
+            // Enhanced form field interactions
+            document.querySelectorAll('input, select, textarea').forEach(field => {
+                field.addEventListener('focus', function() {
+                    this.parentElement.style.transform = 'scale(1.02)';
+                    this.parentElement.style.transition = 'transform 0.3s ease';
+                });
+                
+                field.addEventListener('blur', function() {
+                    this.parentElement.style.transform = 'scale(1)';
+                });
+                
+                // Add real-time validation feedback
+                field.addEventListener('input', function() {
+                    if (this.checkValidity()) {
+                        this.style.borderColor = '#10b981';
+                    } else if (this.value.length > 0) {
+                        this.style.borderColor = '#ef4444';
+                    }
+                });
+            });
+
+            // Mobile hamburger menu functionality - REMOVED as requested
+            // (No hamburger menu code)
         });
     </script>
 </body>
